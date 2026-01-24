@@ -3,18 +3,25 @@ package com.visionrent.service;
 import com.visionrent.domain.Role;
 import com.visionrent.domain.User;
 import com.visionrent.domain.enums.RoleType;
+import com.visionrent.dto.UserDTO;
 import com.visionrent.dto.request.RegisterRequest;
 import com.visionrent.exception.ConflictException;
 import com.visionrent.exception.ResourceNotFoundException;
 import com.visionrent.exception.message.ErrorMessage;
+import com.visionrent.mapper.UserMapper;
 import com.visionrent.repository.UserRepository;
+import com.visionrent.security.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 @Service
 public class UserService {
@@ -25,11 +32,14 @@ public class UserService {
 
     private PasswordEncoder passwordEncoder;
 
+    private UserMapper userMapper;
+
     @Autowired
-    public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, RoleService roleService) {
+    public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, RoleService roleService, UserMapper userMapper) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.roleService = roleService;
+        this.userMapper = userMapper;
     }
 
     public User getUserByEmail(String email) {
@@ -63,5 +73,51 @@ public class UserService {
 
         userRepository.save(user);
 
+    }
+
+    public List<UserDTO> getAllUsers() {
+        List<User> users = userRepository.findAll();
+        List<UserDTO> userDTOs = userMapper.map(users);
+
+        return userDTOs;
+    }
+
+    public UserDTO getPrincipal() {
+        User currentUser = getCurrentUser();
+        // return userMapper.userToUserDTO(currentUser);
+        UserDTO userDTO =  userMapper.userToUserDTO(currentUser);
+
+        return userDTO;
+
+    }
+
+    public User getCurrentUser() {
+       String email = SecurityUtils.getCurrentUserLogin().orElseThrow(()-> new ResourceNotFoundException(ErrorMessage.PRINCIPAL_FOUND_MESSAGE));
+       User user = getUserByEmail(email);
+
+       return user;
+    }
+
+    public Page<UserDTO> getUserPage(Pageable pageable) {
+
+        Page<User> userPage = userRepository.findAll(pageable);
+
+        return getUserDTOPage(userPage);
+
+    }
+
+    private Page<UserDTO> getUserDTOPage(Page<User> userPage) {
+        Page<UserDTO> userDTOPage = userPage.map(new Function<User, UserDTO>() {
+            @Override
+            public UserDTO apply(User user) {
+                return userMapper.userToUserDTO(user);
+            }
+        });
+        return userDTOPage;
+    }
+
+    public UserDTO getUserById(Long id) {
+       User user = userRepository.findById(id).orElseThrow(()-> new ResourceNotFoundException(String.format(ErrorMessage.RESOURCE_NOT_FOUND_MESSAGE,id)));
+       return userMapper.userToUserDTO(user);
     }
 }
