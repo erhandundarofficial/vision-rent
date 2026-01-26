@@ -1,8 +1,13 @@
 package com.visionrent.controller;
 
-import com.visionrent.dto.ContactMessageDTO;
 import com.visionrent.dto.UserDTO;
+import com.visionrent.dto.request.AdminUserUpdateRequest;
+import com.visionrent.dto.request.UpdatePasswordRequest;
+import com.visionrent.dto.request.UserUpdateRequest;
+import com.visionrent.dto.response.ResponseMessage;
+import com.visionrent.dto.response.VRResponse;
 import com.visionrent.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -43,7 +48,9 @@ public class UserController {
     // getAllUsersByPage
     @GetMapping("/auth/pages")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Page<UserDTO>> getAllUsersByPage(@RequestParam("page") int page, @RequestParam("size") int size, @RequestParam("sort") String prop, @RequestParam(value = "direction", required = false, defaultValue = "DESC") Sort.Direction direction) {
+    public ResponseEntity<Page<UserDTO>> getAllUsersByPage(@RequestParam("page") int page,
+            @RequestParam("size") int size, @RequestParam("sort") String prop,
+            @RequestParam(value = "direction", required = false, defaultValue = "DESC") Sort.Direction direction) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, prop));
         Page<UserDTO> userDTOPage = userService.getUserPage(pageable);
@@ -55,10 +62,70 @@ public class UserController {
     @GetMapping("/{id}/auth")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserDTO> getUserById(@PathVariable Long id) {
-       UserDTO userDTO = userService.getUserById(id);
+        UserDTO userDTO = userService.getUserById(id);
 
-       return ResponseEntity.ok(userDTO);
+        return ResponseEntity.ok(userDTO);
     }
+
+    // Update Password
+    @PatchMapping("/auth")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('CUSTOMER')")
+    public ResponseEntity<VRResponse> updatePassword(@Valid @RequestBody UpdatePasswordRequest updatePasswordRequest) {
+
+        userService.updatePassword(updatePasswordRequest);
+
+        VRResponse response = new VRResponse();
+        response.setMessage(ResponseMessage.PASSWORD_CHANGED_RESPONSE_MESSAGE);
+        response.setSuccess(true);
+
+        return ResponseEntity.ok(response);
+
+    }
+
+    // update user
+    @PutMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('CUSTOMER')")
+    public ResponseEntity<VRResponse> updateUser(@Valid @RequestBody UserUpdateRequest  userUpdateRequest) {
+
+        userService.updateUser(userUpdateRequest);
+
+        VRResponse response = new VRResponse();
+        response.setMessage(ResponseMessage.USER_UPDATE_RESPONSE_MESSAGE);
+        response.setSuccess(true);
+
+        return ResponseEntity.ok(response);
+
+    }
+
+    // Admin herhangi bir kullanıcıyı update etsin
+    @PutMapping("/{id}/auth")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<VRResponse> updateUserAuth(@PathVariable Long id, @Valid @RequestBody AdminUserUpdateRequest  adminUserUpdateRequest) {
+
+        userService.updateUserAuth(id,adminUserUpdateRequest);
+
+        VRResponse response = new VRResponse();
+        response.setMessage(ResponseMessage.USER_UPDATE_RESPONSE_MESSAGE);
+        response.setSuccess(true);
+
+        return ResponseEntity.ok(response);
+
+    }
+
+    // delete user
+    @DeleteMapping("/{id}/auth")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<VRResponse> deleteUser(@PathVariable Long id) {
+
+        userService.removeUserById(id);
+
+        VRResponse response = new VRResponse();
+        response.setMessage(ResponseMessage.USER_DELETE_RESPONSE_MESSAGE);
+        response.setSuccess(true);
+
+        return ResponseEntity.ok(response);
+    }
+
 
 
 }
