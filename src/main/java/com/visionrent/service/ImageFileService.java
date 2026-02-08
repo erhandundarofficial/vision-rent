@@ -69,4 +69,9 @@ public class ImageFileService {
        imageFileRepository.delete(imageFile);
 
     }
+
+    // car tarafı için gerekli method
+    public ImageFile findImageById(String id) {
+        return imageFileRepository.findImageById(id).orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessage.IMAGE_NOT_FOUND_MESSAGE, id)));
+    }
 }
